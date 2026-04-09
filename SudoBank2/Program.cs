@@ -1,31 +1,30 @@
-﻿// 1. Explain the line below.
+﻿using System;
+using System.Collections.Generic;  // ADDED for List support
+
+// 1. Explain the line below.
 public interface IRepository
 {
     void Create(BankAccount account);
     BankAccount Read(string accountNumber);
     void Update(BankAccount account);
-    void Delete(string accountNumber);
 }
-
 
 public abstract class AccountBase
 {
     public string AccountNumber { get; set; }
     public string AccountHolder { get; set; }
     public double Balance { get; set; }
+
     // 2. CalculateInterest is abstract, what does that mean?
     public abstract double CalculateInterest();
 
-    public virtual void GenerateStatement()
-    {
-        Console.WriteLine("Generating generic account statement...");
-    }
     // 3. What does virtual mean in this context of GenerateStatement
     public virtual void GenerateStatement(DateTime startDate)
     {
         Console.WriteLine($"Generating statement starting from {startDate.ToShortDateString()}");
     }
 }
+
 // 4. Describe this class below. How do we call the method below.
 public static class BankValidator
 {
@@ -38,36 +37,36 @@ public static class BankValidator
     }
 }
 
-// 5. Describe the inheritance happening below and what it means.
+// 5. Describe the inheritance mapping below and what it means.
+// CONVERTED: Arrays → Lists
 public partial class BankManager : IRepository
 {
-    private BankAccount[] _accounts = new BankAccount[100];
-    private int _accountCount = 0;
+    // CHANGED: Array to List (no more size limit!)
+    private List<BankAccount> _accounts = new List<BankAccount>();
+    // REMOVED: private int _accountCount = 0; (List handles this automatically)
 
     public void Create(BankAccount account)
     {
-        if (account == null || _accountCount >= _accounts.Length)
+        // 6. What does this line below do in this context.
+        if (account == null)
         {
-            // 6. What does this line below do in this context.
-            throw new Exception();
+            throw new Exception("Account cannot be null");
         }
-        _accounts[_accountCount] = account;
-        _accountCount++;
+        // CHANGED: Using List.Add instead of array index
+        _accounts.Add(account);
     }
-}
 
-public partial class BankManager
-{
     public BankAccount Read(string accountNumber)
     {
-        for (int i = 0; i < _accountCount; i++)
+        // CHANGED: Using foreach instead of for loop with counter
+        foreach (BankAccount account in _accounts)
         {
-            if (_accounts[i].AccountNumber == accountNumber)
+            if (account.AccountNumber == accountNumber)
             {
-                return _accounts[i];
+                return account;
             }
         }
-        throw new Exception();
+        throw new Exception("Account not found");
     }
 
     public void Update(BankAccount account)
@@ -77,27 +76,15 @@ public partial class BankManager
         existing.Balance = account.Balance;
     }
 
+    // CHANGED: Delete method is now MUCH simpler with List
     public void Delete(string accountNumber)
     {
-        int indexToRemove = -1;
-        for (int i = 0; i < _accountCount; i++)
+        // List.RemoveAll removes all matching accounts in one line!
+        int removed = _accounts.RemoveAll(a => a.AccountNumber == accountNumber);
+        if (removed == 0)
         {
-            if (_accounts[i].AccountNumber == accountNumber)
-            {
-                indexToRemove = i;
-                break;
-            }
+            throw new Exception("Account not found");
         }
-
-        if (indexToRemove == -1) throw new Exception();
-
-        for (int i = indexToRemove; i < _accountCount - 1; i++)
-        {
-            _accounts[i] = _accounts[i + 1];
-        }
-
-        _accounts[_accountCount - 1] = null;
-        _accountCount--;
     }
 }
 
@@ -111,9 +98,9 @@ public class BankAccount : AccountBase
         return Balance * (InterestRate / 100);
     }
 
-    public override void GenerateStatement()
+    public override void GenerateStatement(DateTime startDate)
     {
-        Console.WriteLine($"Account: {AccountNumber} | Holder: {AccountHolder} | Balance: R{Balance}");
+        Console.WriteLine($"Account: {AccountNumber} | Holder: {AccountHolder} | Balance: {Balance}");
     }
 }
 
@@ -126,7 +113,6 @@ class Program
         try
         {
             Console.WriteLine("--- Banking Management System ---");
-
             Console.Write("Enter Account Number: ");
             string accNum = Console.ReadLine();
             BankValidator.ValidateString(accNum);
@@ -148,7 +134,7 @@ class Program
             double interest = newAccount.CalculateInterest();
             Console.WriteLine($"\nRecord Stored. Projected Interest: R{interest}");
 
-            newAccount.GenerateStatement();
+            newAccount.GenerateStatement(DateTime.Now);
             newAccount.GenerateStatement(DateTime.Now);
 
             Console.WriteLine("\nTesting Delete Operation...");
@@ -159,9 +145,9 @@ class Program
         {
             Console.WriteLine("Error: Format not recognized.");
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            Console.WriteLine("Error: Operation failed.");
+            Console.WriteLine($"Error: {ex.Message}");
         }
     }
 }
