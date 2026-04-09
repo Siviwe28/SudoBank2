@@ -3,25 +3,26 @@ name: .NET CI
 on:
   push:
     branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Setup .NET
-      uses: actions/setup-dotnet@v3
+      uses: actions/setup-dotnet@v4
       with:
         dotnet-version: '8.0.x'
 
-    - name: Restore
-      run: dotnet restore
+    - name: Restore dependencies
+      run: dotnet restore SudoBank2/SudoBank2.csproj
 
     - name: Build
-      run: dotnet build
+      run: dotnet build SudoBank2/SudoBank2.csproj --no-restore --configuration Release
 
-    - name: Run
-      run: dotnet run
+    - name: Run tests
+      run: dotnet test SudoBank2/SudoBank2.csproj --no-build --configuration Release --verbosity normal
